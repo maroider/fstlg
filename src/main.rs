@@ -1,6 +1,9 @@
+#![feature(strict_provenance)]
+
 use std::{
     fmt::Write,
     io,
+    iter,
     panic,
     sync::{
         Arc,
@@ -16,6 +19,8 @@ use crossterm::{
     event::{
         DisableMouseCapture,
         EnableMouseCapture,
+        Event,
+        KeyCode,
     },
     terminal::{
         EnterAlternateScreen,
@@ -31,6 +36,11 @@ use tui::{
         Constraint,
         Direction,
         Layout,
+    },
+    style::{
+        Color,
+        Modifier,
+        Style,
     },
     widgets::{
         Block,
@@ -170,11 +180,6 @@ fn main() {
 
 fn run_app<B: Backend>(terminal: Arc<Mutex<Terminal<B>>>) {
     let mut app = App::new();
-    app.todolist.push(&MPF_SMALL_ARMS[19]);
-    app.todolist.push(&MPF_HEAVY_ARMS[12]);
-    app.todolist.push(&MPF_HEAVY_AMMUNITION[0]);
-    app.todolist.push(&MPF_HEAVY_AMMUNITION[1]);
-    app.todolist.push(&MPF_HEAVY_AMMUNITION[2]);
     let mut terminal = terminal.lock().unwrap();
     let mut last_tick = Instant::now();
     let tick_rate = Duration::from_millis(250);
@@ -189,7 +194,43 @@ fn run_app<B: Backend>(terminal: Arc<Mutex<Terminal<B>>>) {
             .checked_sub(last_tick.elapsed())
             .unwrap_or(Duration::from_secs(0));
         if crossterm::event::poll(timeout).unwrap() {
-            //
+            if let Event::Key(key) = crossterm::event::read().unwrap() {
+                match app.selected_list {
+                    0 => match key.code {
+                        KeyCode::Right => {
+                            app.main_list.unselect();
+                            app.selected_list = 1;
+                            app.todolist.select_next();
+                        }
+                        KeyCode::Up => app.main_list.select_previous(),
+                        KeyCode::Down => app.main_list.select_next(),
+                        KeyCode::Enter => {
+                            app.add_to_todolist();
+                        }
+                        _ => {}
+                    },
+                    1 => match key.code {
+                        KeyCode::Left => {
+                            app.todolist.unselect();
+                            app.selected_list = 0;
+                            app.main_list.select_next();
+                        }
+                        KeyCode::Up => app.todolist.select_previous(),
+                        KeyCode::Down => app.todolist.select_next(),
+                        KeyCode::Enter => {
+                            app.remove_from_todolist();
+                        }
+                        _ => {}
+                    },
+                    _ => {
+                        app.selected_list = 0;
+                    }
+                }
+                match key.code {
+                    KeyCode::Char('q') => return,
+                    _ => {}
+                }
+            }
         }
         if last_tick.elapsed() >= tick_rate {
             // app.on_tick()
@@ -211,9 +252,33 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
             .enumerate()
             .map(|(n, item)| ListItem::new(format_todolist_entry(item, n)))
             .collect();
-        let items =
-            List::new(items).block(Block::default().borders(Borders::ALL).title("Todolist"));
+        let items = List::new(items)
+            .block(Block::default().borders(Borders::ALL).title("Todolist"))
+            .highlight_style(
+                Style::default()
+                    .bg(Color::DarkGray)
+                    .add_modifier(Modifier::BOLD),
+            );
         f.render_stateful_widget(items, right, &mut app.todolist.state);
+
+        let items: Vec<ListItem> = app
+            .main_list
+            .items
+            .iter()
+            .map(|item| match item {
+                DividedListItem::Divider(name) => ListItem::new(name.clone())
+                    .style(Style::default().add_modifier(Modifier::BOLD | Modifier::ITALIC)),
+                DividedListItem::Item(item) => ListItem::new(item.name),
+            })
+            .collect();
+        let items = List::new(items)
+            .block(Block::default().borders(Borders::ALL).title("Add"))
+            .highlight_style(
+                Style::default()
+                    .bg(Color::DarkGray)
+                    .add_modifier(Modifier::BOLD),
+            );
+        f.render_stateful_widget(items, left, &mut app.main_list.state);
     }
 }
 
@@ -249,26 +314,81 @@ fn format_todolist_entry(item: &Item, n: usize) -> String {
 }
 
 struct App {
+    main_list: DividedList<&'static Item>,
     todolist: StatefulList<&'static Item>,
+    selected_list: usize,
 }
 
 impl App {
     fn new() -> Self {
+        let main_items = [
+            ("Small Arms", MPF_SMALL_ARMS),
+            ("Heavy Arms", MPF_HEAVY_ARMS),
+            ("Heavy Ammunition", MPF_HEAVY_AMMUNITION),
+            ("Uniforms", MPF_UNIFORMS),
+        ]
+        .into_iter()
+        .flat_map(|(name, category)| {
+            iter::once(DividedListItem::Divider(name.to_string()))
+                .chain(category.into_iter().map(DividedListItem::Item))
+        })
+        .collect();
         Self {
+            main_list: DividedList::with_items(main_items),
             todolist: StatefulList::with_items(Vec::new()),
+            selected_list: 0,
+        }
+    }
+
+    fn add_to_todolist(&mut self) {
+        if let Some(selected) = self.main_list.state.selected() {
+            if let DividedListItem::Item(item) = self.main_list.items.get(selected).unwrap() {
+                self.todolist.push(item);
+
+                self.todolist.items.sort_by(|this, other| {
+                    let find_category = |item: &'static Item| {
+                        for (n, category) in [
+                            MPF_SMALL_ARMS,
+                            MPF_HEAVY_ARMS,
+                            MPF_HEAVY_AMMUNITION,
+                            MPF_UNIFORMS,
+                        ]
+                        .into_iter()
+                        .enumerate()
+                        {
+                            if category.as_ptr_range().contains(&(item as *const Item)) {
+                                return n;
+                            }
+                        }
+                        return usize::MAX;
+                    };
+
+                    find_category(this)
+                        .cmp(&find_category(other))
+                        .then((*this as *const Item).cmp(&(*other as *const Item)))
+                });
+            }
+        }
+    }
+
+    fn remove_from_todolist(&mut self) {
+        if let Some(selected) = self.todolist.state.selected() {
+            let _ = self.todolist.remove(selected);
         }
     }
 }
 
 struct StatefulList<T> {
     state: ListState,
+    last_pos: Option<usize>,
     items: Vec<T>,
 }
 
 impl<T> StatefulList<T> {
-    fn with_items(items: Vec<T>) -> StatefulList<T> {
-        StatefulList {
+    fn with_items(items: Vec<T>) -> Self {
+        Self {
             state: ListState::default(),
+            last_pos: None,
             items,
         }
     }
@@ -279,7 +399,7 @@ impl<T> StatefulList<T> {
 
     fn remove(&mut self, idx: usize) -> T {
         if let Some(selected) = self.state.selected() {
-            if selected >= idx {
+            if selected == self.items.len() - 1 {
                 self.state.select(selected.checked_sub(1));
             }
         }
@@ -295,7 +415,7 @@ impl<T> StatefulList<T> {
                     i + 1
                 }
             }
-            None => 0,
+            None => self.last_pos.unwrap_or(0),
         };
         self.state.select(Some(i));
     }
@@ -309,12 +429,65 @@ impl<T> StatefulList<T> {
                     i - 1
                 }
             }
-            None => 0,
+            None => self.last_pos.unwrap_or(0),
         };
         self.state.select(Some(i));
     }
 
     fn unselect(&mut self) {
+        self.last_pos = self.state.selected();
+        self.state.select(None);
+    }
+}
+
+struct DividedList<T> {
+    state: ListState,
+    last_pos: Option<usize>,
+    items: Vec<DividedListItem<T>>,
+}
+
+enum DividedListItem<T> {
+    Divider(String),
+    Item(T),
+}
+
+impl<T> DividedList<T> {
+    fn with_items(items: Vec<DividedListItem<T>>) -> Self {
+        Self {
+            state: ListState::default(),
+            last_pos: None,
+            items,
+        }
+    }
+
+    fn select_next(&mut self) {
+        let i = match self.state.selected() {
+            Some(mut i) => loop {
+                i = if i >= self.items.len() - 1 { 0 } else { i + 1 };
+                if matches!(self.items.get(i), Some(DividedListItem::Item(_))) {
+                    break i;
+                }
+            },
+            None => self.last_pos.unwrap_or(0),
+        };
+        self.state.select(Some(i));
+    }
+
+    fn select_previous(&mut self) {
+        let i = match self.state.selected() {
+            Some(mut i) => loop {
+                i = if i == 0 { self.items.len() - 1 } else { i - 1 };
+                if matches!(self.items.get(i), Some(DividedListItem::Item(_))) {
+                    break i;
+                }
+            },
+            None => self.last_pos.unwrap_or(0),
+        };
+        self.state.select(Some(i));
+    }
+
+    fn unselect(&mut self) {
+        self.last_pos = self.state.selected();
         self.state.select(None);
     }
 }
@@ -326,6 +499,7 @@ struct Item {
     emats: u32,
     rmats: u32,
     hemats: u32,
+    #[allow(dead_code)]
     useless: bool,
 }
 

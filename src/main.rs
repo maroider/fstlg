@@ -86,6 +86,18 @@ const MPF_HEAVY_AMMUNITION: &[Item] = &[
     Item::new("40mm",                               None,                       880,    660,    0,      0),
 ];
 
+#[rustfmt::skip]
+const MPF_UNIFORMS: &[Item] = &[
+    Item::new("Specialist's Overcoat",              None,                       550,    0,      0,      0),
+    Item::new("Gunner's Breastplate",               None,                       550,    0,      0,      0),
+    Item::new("Sapper Gear",                        None,                       550,    0,      0,      0),
+    Item::new("Physician's Jacket",                 None,                       550,    0,      0,      0),
+    Item::new("Officer's Regalia",                  None,                       550,    0,      0,      0),
+    Item::new("Outrider's Mantle",                  None,                       550,    0,      0,      0),
+    Item::new("Caovish Parka",                      None,                       550,    0,      0,      0),
+    Item::new("Padded Boiler Suit",                 None,                       550,    0,      0,      0),
+];
+
 fn main() {
     let panic_infos = Arc::new(Mutex::new(Vec::new()));
     panic::set_hook({

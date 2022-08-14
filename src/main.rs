@@ -1,12 +1,15 @@
 use std::{
+    fmt::Write,
     io,
     panic,
     sync::{
         Arc,
         Mutex,
     },
-    thread,
-    time::Duration,
+    time::{
+        Duration,
+        Instant,
+    },
 };
 
 use crossterm::{
@@ -20,11 +23,23 @@ use crossterm::{
     },
 };
 use tui::{
-    backend::CrosstermBackend,
+    backend::{
+        Backend,
+        CrosstermBackend,
+    },
+    layout::{
+        Constraint,
+        Direction,
+        Layout,
+    },
     widgets::{
         Block,
         Borders,
+        List,
+        ListItem,
+        ListState,
     },
+    Frame,
     Terminal,
 };
 
@@ -117,18 +132,16 @@ fn main() {
     let mut stdout = io::stdout();
     crossterm::execute!(stdout, EnterAlternateScreen, EnableMouseCapture).unwrap();
     let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend).unwrap();
+    let terminal = Arc::new(Mutex::new(Terminal::new(backend).unwrap()));
 
-    terminal
-        .draw(|f| {
-            let size = f.size();
-            let block = Block::default().title("Block").borders(Borders::ALL);
-            f.render_widget(block, size);
-        })
-        .unwrap();
+    let result = panic::catch_unwind({
+        let terminal = terminal.clone();
+        || {
+            run_app(terminal);
+        }
+    });
 
-    // thread::sleep(Duration::from_millis(5000));
-
+    let mut terminal = terminal.lock().unwrap();
     crossterm::terminal::disable_raw_mode().unwrap();
     crossterm::execute!(
         terminal.backend_mut(),
@@ -138,7 +151,7 @@ fn main() {
     .unwrap();
     terminal.show_cursor().unwrap();
 
-    if let Err(err) = panic::catch_unwind(|| panic!("nice")) {
+    if let Err(err) = result {
         for (message, location) in panic_infos.lock().unwrap().iter() {
             if let Some((file, line)) = location {
                 eprintln!(
@@ -152,6 +165,157 @@ fn main() {
             }
         }
         panic::resume_unwind(err);
+    }
+}
+
+fn run_app<B: Backend>(terminal: Arc<Mutex<Terminal<B>>>) {
+    let mut app = App::new();
+    app.todolist.push(&MPF_SMALL_ARMS[19]);
+    app.todolist.push(&MPF_HEAVY_ARMS[12]);
+    app.todolist.push(&MPF_HEAVY_AMMUNITION[0]);
+    app.todolist.push(&MPF_HEAVY_AMMUNITION[1]);
+    app.todolist.push(&MPF_HEAVY_AMMUNITION[2]);
+    let mut terminal = terminal.lock().unwrap();
+    let mut last_tick = Instant::now();
+    let tick_rate = Duration::from_millis(250);
+    loop {
+        terminal
+            .draw(|f| {
+                ui(f, &mut app);
+            })
+            .unwrap();
+
+        let timeout = tick_rate
+            .checked_sub(last_tick.elapsed())
+            .unwrap_or(Duration::from_secs(0));
+        if crossterm::event::poll(timeout).unwrap() {
+            //
+        }
+        if last_tick.elapsed() >= tick_rate {
+            // app.on_tick()
+            last_tick = Instant::now();
+        }
+    }
+}
+
+fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
+    if let [left, right, ..] = *Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .split(f.size())
+    {
+        let items: Vec<ListItem> = app
+            .todolist
+            .items
+            .iter()
+            .enumerate()
+            .map(|(n, item)| ListItem::new(format_todolist_entry(item, n)))
+            .collect();
+        let items =
+            List::new(items).block(Block::default().borders(Borders::ALL).title("Todolist"));
+        f.render_stateful_widget(items, right, &mut app.todolist.state);
+    }
+}
+
+fn format_todolist_entry(item: &Item, n: usize) -> String {
+    let format_material_amount =
+        |out: &mut String, amount: u32, name: &str, crated_amount: u32, comma: bool| {
+            if amount > 0 {
+                let comma = if comma { ", " } else { "" };
+                let crates = (amount as f32 / crated_amount as f32).ceil() as u32;
+                write!(out, "{comma}{amount} {name} ({crates}📦)").unwrap();
+                true
+            } else {
+                false | comma
+            }
+        };
+    let format_material_amounts = |item: &Item| {
+        let mut out = String::new();
+        let mut comma = false;
+        comma = format_material_amount(&mut out, item.bmats, "Bmats", 100, comma);
+        comma = format_material_amount(&mut out, item.emats, "Emats", 20, comma);
+        comma = format_material_amount(&mut out, item.rmats, "Rmats", 20, comma);
+        let _ = format_material_amount(&mut out, item.hemats, "HEmats", 20, comma);
+        out
+    };
+    let hack = true;
+    format!(
+        "{}{}・1 Queue of {}・{}",
+        char::from_u32(0x1F1E6 + n as u32).unwrap_or('X'),
+        if hack { " " } else { "" },
+        item.short_name.unwrap_or(item.name),
+        format_material_amounts(item)
+    )
+}
+
+struct App {
+    todolist: StatefulList<&'static Item>,
+}
+
+impl App {
+    fn new() -> Self {
+        Self {
+            todolist: StatefulList::with_items(Vec::new()),
+        }
+    }
+}
+
+struct StatefulList<T> {
+    state: ListState,
+    items: Vec<T>,
+}
+
+impl<T> StatefulList<T> {
+    fn with_items(items: Vec<T>) -> StatefulList<T> {
+        StatefulList {
+            state: ListState::default(),
+            items,
+        }
+    }
+
+    fn push(&mut self, item: T) {
+        self.items.push(item);
+    }
+
+    fn remove(&mut self, idx: usize) -> T {
+        if let Some(selected) = self.state.selected() {
+            if selected >= idx {
+                self.state.select(selected.checked_sub(1));
+            }
+        }
+        self.items.remove(idx)
+    }
+
+    fn select_next(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i >= self.items.len() - 1 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
+
+    fn select_previous(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    self.items.len() - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
+
+    fn unselect(&mut self) {
+        self.state.select(None);
     }
 }
 

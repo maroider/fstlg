@@ -228,6 +228,7 @@ fn run_app<B: Backend>(terminal: Arc<Mutex<Terminal<B>>>) {
                 }
                 match key.code {
                     KeyCode::Char('q') => return,
+                    KeyCode::Char('w') => app.write_output(),
                     _ => {}
                 }
             }
@@ -375,6 +376,14 @@ impl App {
         if let Some(selected) = self.todolist.state.selected() {
             let _ = self.todolist.remove(selected);
         }
+    }
+
+    fn write_output(&self) {
+        let mut output = String::new();
+        for (n, item) in self.todolist.items.iter().enumerate() {
+            writeln!(output, "{}", format_todolist_entry(item, n)).unwrap();
+        }
+        std::fs::write("output.txt", output.as_bytes()).unwrap();
     }
 }
 

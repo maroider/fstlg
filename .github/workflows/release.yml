@@ -1,0 +1,24 @@
+name: Release
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      # - name: Setup Rust toolchain
+      #   uses: actions-rs/toolchain@v1
+      - name: Build release binary
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: target/release/fstlg.exe
+          generate_release_notes: false

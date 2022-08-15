@@ -251,7 +251,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
             .items
             .iter()
             .enumerate()
-            .map(|(n, item)| ListItem::new(format_todolist_entry(item, n)))
+            .map(|(n, item)| ListItem::new(format_todolist_entry(item, n, true)))
             .collect();
         let items = List::new(items)
             .block(Block::default().borders(Borders::ALL).title("Todolist"))
@@ -283,7 +283,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     }
 }
 
-fn format_todolist_entry(item: &Item, n: usize) -> String {
+fn format_todolist_entry(item: &Item, n: usize, letter_width_hack: bool) -> String {
     let format_material_amount =
         |out: &mut String, amount: u32, name: &str, crated_amount: u32, comma: bool| {
             if amount > 0 {
@@ -304,11 +304,10 @@ fn format_todolist_entry(item: &Item, n: usize) -> String {
         let _ = format_material_amount(&mut out, item.hemats, "HEmats", 20, comma);
         out
     };
-    let hack = true;
     format!(
         "{}{}・1 Queue of {}・{}",
         char::from_u32(0x1F1E6 + n as u32).unwrap_or('X'),
-        if hack { " " } else { "" },
+        if letter_width_hack { " " } else { "" },
         item.short_name.unwrap_or(item.name),
         format_material_amounts(item)
     )
@@ -381,7 +380,7 @@ impl App {
     fn write_output(&self) {
         let mut output = String::new();
         for (n, item) in self.todolist.items.iter().enumerate() {
-            writeln!(output, "{}", format_todolist_entry(item, n)).unwrap();
+            writeln!(output, "{}", format_todolist_entry(item, n, false)).unwrap();
         }
         std::fs::write("output.txt", output.as_bytes()).unwrap();
     }

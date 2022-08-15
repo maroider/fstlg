@@ -20,5 +20,6 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
+          body:
           files: target/release/fstlg.exe
-          generate_release_notes: false
+            #generate_release_notes: false

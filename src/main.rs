@@ -105,7 +105,7 @@ const MPF_HEAVY_ARMS: &[Item] = &[
 #[rustfmt::skip]
 const MPF_HEAVY_AMMUNITION: &[Item] = &[
     Item::new("150mm",                              None,                       660,    0,      0,      55),
-    Item::new("120mm",                              None,                       330,    0,      0,      0),
+    Item::new("120mm",                              None,                       330,    79,     0,      0),
     Item::new("250mm",                              None,                       660,    0,      0,      134),
     Item::new("68mm",                               None,                       660,    660,    0,      0),
     Item::new("40mm",                               None,                       880,    660,    0,      0),

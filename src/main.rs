@@ -99,6 +99,7 @@ const MPF_HEAVY_ARMS: &[Item] = &[
     Item::new("Mammon 91-b",                        Some("Mammon"),             550,    55,     0,      0),
     Item::new("Anti-Tank Sticky Bomb",              Some("Sticky Bomb"),        275,    275,    0,      0),
     Item::new("Cutler Foebreaker",                  Some("Foebreaker"),         550,    0,      24,     0),
+    Item::new("Cutler Launcher 4",                  None,                       550,    0,      79,     0),
     Item::new("RPG Shell",                          None,                       330,    244,    0,      0),
 ];
 

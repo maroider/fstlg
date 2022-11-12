@@ -155,7 +155,7 @@ const MPF_UNIFORMS: &[Item] = &[
     Item::new("Tankman's Coveralls",                None,                       550,    0,      0,      0,  C),
 ];
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Faction {
     Warden,
     Colonial,
@@ -318,16 +318,6 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
                 .main_list
                 .items
                 .iter()
-                .filter(|item| {
-                    if let DividedListItem::Item(item) = item {
-                        item.faction
-                            .as_ref()
-                            .map(|faction| *faction == app.faction)
-                            .unwrap_or(true)
-                    } else {
-                        true
-                    }
-                })
                 .map(|item| match item {
                     DividedListItem::Divider(name) => ListItem::new(name.clone())
                         .style(Style::default().add_modifier(Modifier::BOLD | Modifier::ITALIC)),
@@ -385,24 +375,39 @@ struct App {
 
 impl App {
     fn new() -> Self {
-        let main_items = [
-            ("Small Arms", MPF_SMALL_ARMS),
-            ("Heavy Arms", MPF_HEAVY_ARMS),
-            ("Heavy Ammunition", MPF_HEAVY_AMMUNITION),
-            ("Uniforms", MPF_UNIFORMS),
-        ]
-        .into_iter()
-        .flat_map(|(name, category)| {
-            iter::once(DividedListItem::Divider(name.to_string()))
-                .chain(category.into_iter().map(DividedListItem::Item))
-        })
-        .collect();
+        let faction = Faction::Warden;
         Self {
-            main_list: DividedList::with_items(main_items),
+            main_list: Self::init_main_list(faction),
             todolist: StatefulList::with_items(Vec::new()),
             selected_list: 0,
-            faction: Faction::Warden,
+            faction,
         }
+    }
+
+    fn init_main_list(faction: Faction) -> DividedList<&'static Item> {
+        DividedList::with_items(
+            [
+                ("Small Arms", MPF_SMALL_ARMS),
+                ("Heavy Arms", MPF_HEAVY_ARMS),
+                ("Heavy Ammunition", MPF_HEAVY_AMMUNITION),
+                ("Uniforms", MPF_UNIFORMS),
+            ]
+            .into_iter()
+            .flat_map(|(name, category)| {
+                iter::once(DividedListItem::Divider(name.to_string())).chain(
+                    category
+                        .into_iter()
+                        .filter(|item| {
+                            item.faction
+                                .as_ref()
+                                .map(|fac| *fac == faction)
+                                .unwrap_or(true)
+                        })
+                        .map(DividedListItem::Item),
+                )
+            })
+            .collect(),
+        )
     }
 
     fn add_to_todolist(&mut self) {
@@ -455,6 +460,7 @@ impl App {
             Faction::Warden => Faction::Colonial,
             Faction::Colonial => Faction::Warden,
         };
+        self.main_list = Self::init_main_list(self.faction);
     }
 }
 

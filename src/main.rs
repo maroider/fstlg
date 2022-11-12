@@ -48,6 +48,7 @@ use tui::{
         List,
         ListItem,
         ListState,
+        Paragraph,
     },
     Frame,
     Terminal,
@@ -55,75 +56,112 @@ use tui::{
 
 #[rustfmt::skip]
 const MPF_SMALL_ARMS: &[Item] = &[
-    Item::new("Booker Storm Rifle Model 838",       None,                       904,    0,      0,      0),
-    Item::new("Aalto Storm Rifle 24",               None,                       904,    0,      0,      0),
-    Item::new("7.92mm",                             None,                       660,    0,      0,      0),
-    Item::new("Malone MK.2",                        None,                       0,      0,      134,    0),
-    Item::new("A3 Harpa Fragmentation Grenade",     Some("Harpa"),              550,    110,    0,      0),
-    Item::new_useless("Cascadier 837",              None,                       330,    0,      0,      0),
-    Item::new_useless("8mm",                        None,                       220,    0,      0,      0),
-    Item::new("Cometa T2-9",                        Some("Revolver"),           330,    0,      0,      0),
-    Item::new("The Hangman 757",                    Some("Hangman"),            684,    0,      0,      0),
-    Item::new("0.44",                               None,                       220,    0,      0,      0),
-    Item::new("Sampo Auto-Rifle 77",                Some("Sampo"),              684,    0,      0,      0),
-    Item::new("Blakerow 871",                       Some("Blakerow"),           770,    0,      0,      0),
-    Item::new("Clancy Cinder M3",                   Some("Clancy Cinder"),      715,    0,      0,      0),
-    Item::new("No.2 Loughcaster",                   Some("Loughcaster"),        550,    0,      0,      0),
-    Item::new("Clancy-Raca M4",                     Some("Clancy-Raca"),        1100,   0,      79,     0),
-    Item::new("7.62",                               None,                       440,    0,      0,      0),
-    Item::new("Brasa Shotgun",                      Some("Shotgun"),            440,    0,      0,      0),
-    Item::new("Buckshot",                           None,                       440,    0,      0,      0),
-    Item::new(r#"No.1 "The Liar" Submachinegun"#,   Some("The Liar"),           660,    0,      0,      0),
-    Item::new("Fiddler Submachine Gun Model 868",   Some("Fiddler"),            660,    0,      0,      0),
-    Item::new("9mm",                                None,                       440,    0,      0,      0),
-    Item::new("PT-815 Smoke Grenade",               Some("Smoke Grenade"),      660,    0,      0,      0),
-    Item::new("Green Ash Grenade",                  Some("Green Ash"),          770,    0,      0,      0),
-    Item::new("12.7mm",                             None,                       550,    0,      0,      0),
+    Item::new("Booker Storm Rifle Model 838",       None,                       904,    0,      0,      0,  W),
+    Item::new("Aalto Storm Rifle 24",               None,                       904,    0,      0,      0,  W),
+    Item::new(r#""Dusk" ce.III"#,                    None,                       904,    0,      0,      0,  C),
+    Item::new("7.92mm",                             None,                       660,    0,      0,      0,  None),
+    Item::new("Malone MK.2",                        None,                       0,      0,      134,    0,  W),
+    Item::new("A3 Harpa Fragmentation Grenade",     Some("Harpa"),              550,    110,    0,      0,  W),
+    Item::new_useless("Cascadier 837",              None,                       330,    0,      0,      0,  W),
+    Item::new("Catara mo.II",                       Some("Catara"),             904,    0,      0,      0,  C),
+    Item::new("KRN886-127 Gast Machine Gun",        Some("Gast"),               0,      0,      134,    0,  C),
+    Item::new("Bombastone Grenade",                 Some("Bombastone"),         550,    110,    0,      0,  C),
+    Item::new_useless("8mm",                        None,                       220,    0,      0,      0,  None),
+    Item::new("Cometa T2-9",                        Some("Revolver"),           330,    0,      0,      0,  None),
+    Item::new("The Hangman 757",                    Some("Hangman"),            684,    0,      0,      0,  W),
+    Item::new("0.44",                               None,                       220,    0,      0,      0,  None),
+    Item::new("Sampo Auto-Rifle 77",                Some("Sampo"),              684,    0,      0,      0,  W),
+    Item::new("Blakerow 871",                       Some("Blakerow"),           770,    0,      0,      0,  W),
+    Item::new("Clancy Cinder M3",                   Some("Clancy Cinder"),      715,    0,      0,      0,  W),
+    Item::new("No.2 Loughcaster",                   Some("Loughcaster"),        550,    0,      0,      0,  W),
+    Item::new("Clancy-Raca M4",                     Some("Clancy-Raca"),        1100,   0,      79,     0,  W),
+    Item::new("Argenti r.II Rifle",                 Some("Argenti"),            550,    0,      0,      0,  C),
+    Item::new("Volta r.I Repeater",                 Some("Volta"),              550,    0,      0,      0,  C),
+    Item::new("Fuscina pi.I",                       Some("Fuscina"),            770,    0,      0,      0,  C),
+    Item::new("KRR2-790 Omen",                      Some("Omen"),               849,    0,      0,      0,  C),
+    Item::new("KRR3-792 Auger",                     Some("Auger"),              1100,   134,    0,      0,  C),
+    Item::new("7.62",                               None,                       440,    0,      0,      0,  None),
+    Item::new("Brasa Shotgun",                      Some("Shotgun"),            440,    0,      0,      0,  None),
+    Item::new("Buckshot",                           None,                       440,    0,      0,      0,  None),
+    Item::new(r#"No.1 "The Liar" Submachinegun"#,   Some("The Liar"),           660,    0,      0,      0,  W),
+    Item::new("Fiddler Submachine Gun Model 868",   Some("Fiddler"),            660,    0,      0,      0,  W),
+    Item::new(r#""The Pitch Gun" mc. V"#,           Some("Pitch Gun"),          440,    0,      0,      0,  C),
+    Item::new(r#""Lionclaw" mc.VIII"#,              Some("Lionclaw"),           660,    0,      0,      0,  C),
+    Item::new("9mm",                                None,                       440,    0,      0,      0,  None),
+    Item::new("PT-815 Smoke Grenade",               Some("Smoke Grenade"),      660,    0,      0,      0,  None),
+    Item::new("Green Ash Grenade",                  Some("Green Ash"),          770,    0,      0,      0,  None),
+    Item::new("12.7mm",                             None,                       550,    0,      0,      0,  None),
 ];
 
 #[rustfmt::skip]
 const MPF_HEAVY_ARMS: &[Item] = &[
-    Item::new("135 Neville Anti-Tank Rifle",        Some("Anti-Tank Rifle"),    825,    0,      0,      0),
-    Item::new("20mm",                               None,                       550,    0,      0,      0),
-    Item::new("Mounted Bonesaw MK.3",               Some("Mounted Bonesaw"),    550,    0,      24,     0),
-    Item::new("Bonesaw MK.3",                       Some("Bonesaw"),            550,    0,      134,    0),
-    Item::new("ARC/RPG",                            None,                       330,    409,    0,      0),
-    Item::new("Willow's Bane Model 845",            Some("Flamethrower"),       904,    0,      165,    0),
-    Item::new("Tremola Grenade GPb-1",              Some("Tremola"),            825,    55,     0,      0),
-    Item::new("Malone Ratcheter MK.1",              Some("Malone Ratcheter"),   550,    0,      24,     0),
-    Item::new("30mm",                               None,                       440,    110,    0,      0),
-    Item::new("Cremari Mortar",                     None,                       550,    0,      134,    0),
-    Item::new("Mortar Flare Shell",                 None,                       330,    55,     0,      0),
-    Item::new("Mortar Shrapnel Shell",              None,                       330,    79,     0,      0),
-    Item::new("Mortar Shell",                       None,                       330,    189,    0,      0),
-    Item::new("BF5 White Ash Flask Grenade",        Some("White Ash"),          550,    220,    0,      0),
-    Item::new("Mammon 91-b",                        Some("Mammon"),             550,    55,     0,      0),
-    Item::new("Anti-Tank Sticky Bomb",              Some("Sticky Bomb"),        275,    275,    0,      0),
-    Item::new("Cutler Foebreaker",                  Some("Foebreaker"),         550,    0,      24,     0),
-    Item::new("Cutler Launcher 4",                  None,                       550,    0,      189,     0),
-    Item::new("RPG Shell",                          None,                       330,    244,    0,      0),
+    Item::new("135 Neville Anti-Tank Rifle",        Some("Anti-Tank Rifle"),    825,    0,      0,      0,  W),
+    Item::new(r#"Typhon ra.XII"#,                   Some("Typhon"),             550,    0,      24,     0,  C),
+    Item::new("20mm",                               None,                       550,    0,      0,      0,  None),
+    Item::new("Mounted Bonesaw MK.3",               Some("Mounted Bonesaw"),    550,    0,      24,     0,  W),
+    Item::new("Bonesaw MK.3",                       Some("Bonesaw"),            550,    0,      134,    0,  W),
+    Item::new("Venom c.II 35",                      Some("Venom"),              550,    0,      79,     0,  C),
+    Item::new("Bane 45",                            Some("Bane"),               825,    0,      220,    0,  C),
+    Item::new("AP/RPG",                             None,                       330,    409,    0,      0,  C),
+    Item::new("ARC/RPG",                            None,                       330,    409,    0,      0,  None),
+    Item::new("Willow's Bane Model 845",            Some("Flamethrower"),       904,    0,      165,    0,  W),
+    Item::new(r#""Molten Wind" v.II Flame Torch"#,  Some("Flamethrower"),       1014,   0,      134,    0,  C),
+    Item::new("KLG91-2 Lunaire F",                  Some("Lunaire"),            275,    0,      24,     0,  C),
+    Item::new("Tremola Grenade GPb-1",              Some("Tremola"),            825,    55,     0,      0,  None),
+    Item::new("Malone Ratcheter MK.1",              Some("Malone Ratcheter"),   550,    0,      24,     0,  W),
+    Item::new("Lamentum mm.IV",                     Some("Lamentum"),           550,    0,      24,     0,  C),
+    Item::new("Daucus isg.III",                     Some("ISG"),                550,    0,      24,     0,  C),
+    Item::new("30mm",                               None,                       440,    110,    0,      0,  None),
+    Item::new("Cremari Mortar",                     None,                       550,    0,      134,    0,  None),
+    Item::new("Mortar Flare Shell",                 None,                       330,    55,     0,      0,  None),
+    Item::new("Mortar Shrapnel Shell",              None,                       330,    79,     0,      0,  None),
+    Item::new("Mortar Shell",                       None,                       330,    189,    0,      0,  None),
+    Item::new("BF5 White Ash Flask Grenade",        Some("White Ash"),          550,    220,    0,      0,  W),
+    Item::new("Ignifist 30",                        Some("Ignifist"),           464,    189,    0,      0,  C),
+    Item::new("Mammon 91-b",                        Some("Mammon"),             550,    55,     0,      0,  None),
+    Item::new("Anti-Tank Sticky Bomb",              Some("Sticky Bomb"),        275,    275,    0,      0,  None),
+    Item::new("Cutler Foebreaker",                  Some("Foebreaker"),         550,    0,      24,     0,  W),
+    Item::new("Cutler Launcher 4",                  None,                       550,    0,      189,    0,  W),
+    Item::new("RPG Shell",                          None,                       330,    244,    0,      0,  None),
 ];
 
 #[rustfmt::skip]
 const MPF_HEAVY_AMMUNITION: &[Item] = &[
-    Item::new("150mm",                              None,                       660,    0,      0,      55),
-    Item::new("120mm",                              None,                       330,    79,     0,      0),
-    Item::new("250mm",                              None,                       660,    0,      0,      134),
-    Item::new("68mm",                               None,                       660,    660,    0,      0),
-    Item::new("40mm",                               None,                       880,    660,    0,      0),
+    Item::new("150mm",                              None,                       660,    0,      0,      55,     None),
+    Item::new("120mm",                              None,                       330,    79,     0,      0,      None),
+    Item::new("250mm",                              None,                       660,    0,      0,      134,    None),
+    Item::new("68mm",                               None,                       660,    660,    0,      0,      None),
+    Item::new("40mm",                               None,                       880,    660,    0,      0,      None),
 ];
 
 #[rustfmt::skip]
 const MPF_UNIFORMS: &[Item] = &[
-    Item::new("Specialist's Overcoat",              None,                       550,    0,      0,      0),
-    Item::new("Gunner's Breastplate",               None,                       550,    0,      0,      0),
-    Item::new("Sapper Gear",                        None,                       550,    0,      0,      0),
-    Item::new("Physician's Jacket",                 None,                       550,    0,      0,      0),
-    Item::new("Officer's Regalia",                  None,                       550,    0,      0,      0),
-    Item::new("Outrider's Mantle",                  None,                       550,    0,      0,      0),
-    Item::new("Caovish Parka",                      None,                       550,    0,      0,      0),
-    Item::new("Padded Boiler Suit",                 None,                       550,    0,      0,      0),
+    Item::new("Specialist's Overcoat",              None,                       550,    0,      0,      0,  W),
+    Item::new("Gunner's Breastplate",               None,                       550,    0,      0,      0,  W),
+    Item::new("Sapper Gear",                        None,                       550,    0,      0,      0,  W),
+    Item::new("Physician's Jacket",                 None,                       550,    0,      0,      0,  W),
+    Item::new("Officer's Regalia",                  None,                       550,    0,      0,      0,  W),
+    Item::new("Outrider's Mantle",                  None,                       550,    0,      0,      0,  W),
+    Item::new("Caovish Parka",                      None,                       550,    0,      0,      0,  W),
+    Item::new("Padded Boiler Suit",                 None,                       550,    0,      0,      0,  W),
+    Item::new("Velian Flak Vest",                   None,                       550,    0,      0,      0,  C),
+    Item::new("Fabri Rucksack",                     None,                       550,    0,      0,      0,  C),
+    Item::new("Grenadier's Baldric",                None,                       550,    0,      0,      0,  C),
+    Item::new("Medic Fatigues",                     None,                       550,    0,      0,      0,  C),
+    Item::new("Officialis' Attire",                 None,                       550,    0,      0,      0,  C),
+    Item::new("Legionary's Oilcoat",                None,                       550,    0,      0,      0,  C),
+    Item::new("Recon Camo",                         None,                       550,    0,      0,      0,  C),
+    Item::new("Heavy Topcoat",                      None,                       550,    0,      0,      0,  C),
+    Item::new("Tankman's Coveralls",                None,                       550,    0,      0,      0,  C),
 ];
+
+#[derive(Debug, PartialEq, Eq)]
+enum Faction {
+    Warden,
+    Colonial,
+}
+const W: Option<Faction> = Some(Faction::Warden);
+const C: Option<Faction> = Some(Faction::Colonial);
 
 fn main() {
     let panic_infos = Arc::new(Mutex::new(Vec::new()));
@@ -231,6 +269,7 @@ fn run_app<B: Backend>(terminal: Arc<Mutex<Terminal<B>>>) {
                 match key.code {
                     KeyCode::Char('q') => return,
                     KeyCode::Char('w') => app.write_output(),
+                    KeyCode::Char('f') => app.swap_faction(),
                     _ => {}
                 }
             }
@@ -262,26 +301,48 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
                     .bg(Color::DarkGray)
                     .add_modifier(Modifier::BOLD),
             );
-        f.render_stateful_widget(items, right, &mut app.todolist.state);
-
-        let items: Vec<ListItem> = app
-            .main_list
-            .items
-            .iter()
-            .map(|item| match item {
-                DividedListItem::Divider(name) => ListItem::new(name.clone())
-                    .style(Style::default().add_modifier(Modifier::BOLD | Modifier::ITALIC)),
-                DividedListItem::Item(item) => ListItem::new(item.name),
-            })
-            .collect();
-        let items = List::new(items)
-            .block(Block::default().borders(Borders::ALL).title("Add"))
-            .highlight_style(
-                Style::default()
-                    .bg(Color::DarkGray)
-                    .add_modifier(Modifier::BOLD),
+        if let [right_top, right_bottom, ..] = *Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Length(3), Constraint::Min(10)])
+            .split(right)
+        {
+            f.render_widget(
+                Paragraph::new(format!("Faction: {:?}", app.faction))
+                    .block(Block::default().borders(Borders::ALL).title("Settings")),
+                right_top,
             );
-        f.render_stateful_widget(items, left, &mut app.main_list.state);
+
+            f.render_stateful_widget(items, right_bottom, &mut app.todolist.state);
+
+            let items: Vec<ListItem> = app
+                .main_list
+                .items
+                .iter()
+                .filter(|item| {
+                    if let DividedListItem::Item(item) = item {
+                        item.faction
+                            .as_ref()
+                            .map(|faction| *faction == app.faction)
+                            .unwrap_or(true)
+                    } else {
+                        true
+                    }
+                })
+                .map(|item| match item {
+                    DividedListItem::Divider(name) => ListItem::new(name.clone())
+                        .style(Style::default().add_modifier(Modifier::BOLD | Modifier::ITALIC)),
+                    DividedListItem::Item(item) => ListItem::new(item.name),
+                })
+                .collect();
+            let items = List::new(items)
+                .block(Block::default().borders(Borders::ALL).title("Add"))
+                .highlight_style(
+                    Style::default()
+                        .bg(Color::DarkGray)
+                        .add_modifier(Modifier::BOLD),
+                );
+            f.render_stateful_widget(items, left, &mut app.main_list.state);
+        }
     }
 }
 
@@ -319,6 +380,7 @@ struct App {
     main_list: DividedList<&'static Item>,
     todolist: StatefulList<&'static Item>,
     selected_list: usize,
+    faction: Faction,
 }
 
 impl App {
@@ -339,6 +401,7 @@ impl App {
             main_list: DividedList::with_items(main_items),
             todolist: StatefulList::with_items(Vec::new()),
             selected_list: 0,
+            faction: Faction::Warden,
         }
     }
 
@@ -385,6 +448,13 @@ impl App {
             writeln!(output, "{}", format_todolist_entry(item, n, false)).unwrap();
         }
         std::fs::write("output.txt", output.as_bytes()).unwrap();
+    }
+
+    fn swap_faction(&mut self) {
+        self.faction = match self.faction {
+            Faction::Warden => Faction::Colonial,
+            Faction::Colonial => Faction::Warden,
+        };
     }
 }
 
@@ -511,6 +581,7 @@ struct Item {
     hemats: u32,
     #[allow(dead_code)]
     useless: bool,
+    faction: Option<Faction>,
 }
 
 impl Item {
@@ -521,6 +592,7 @@ impl Item {
         emats: u32,
         rmats: u32,
         hemats: u32,
+        faction: Option<Faction>,
     ) -> Self {
         Self {
             name,
@@ -530,6 +602,7 @@ impl Item {
             rmats,
             hemats,
             useless: false,
+            faction,
         }
     }
 
@@ -540,6 +613,7 @@ impl Item {
         emats: u32,
         rmats: u32,
         hemats: u32,
+        faction: Option<Faction>,
     ) -> Self {
         Self {
             name,
@@ -549,6 +623,7 @@ impl Item {
             rmats,
             hemats,
             useless: true,
+            faction,
         }
     }
 }

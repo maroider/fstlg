@@ -15,6 +15,7 @@ the terminal by navigating to where you've saved the executable and running it f
 
 - Arrow keys to move around
 - <kbd>Enter</kbd> to add and remove items from/to the todo-list
+- <kbd>f</kbd> switches what faction items to use
 - <kbd>w</kbd> writes the todo-list to `output.txt`
 - <kbd>q</kbd> exits the application
 
